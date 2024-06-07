@@ -1,3 +1,5 @@
+#git ignore file, add all the unnecessary extentions etc. here
+
 # Python
 __pycache__
 *.py[cod]
