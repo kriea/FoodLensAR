@@ -63,7 +63,7 @@ def findId(img, desList):
 desList = findDes(imgStock)
 print('Number of descriptors:', len(desList))
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 # Define fixed dimension for bounding boxes
 boxWidth, boxHeight = 100, 100
