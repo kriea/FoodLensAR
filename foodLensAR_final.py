@@ -205,11 +205,11 @@ class CameraWindow(QMainWindow):
                             # Only consider this a valid detection if the bounding box is larger than 20x20 pixels
                             self.detection_counts[className[i]] += 1
 
-                            # Draw bounding box
+                            # Draw bounding box and class name only if the box is large enough
                             img2 = cv2.polylines(img2, [np.int32(dst)], isClosed=True, color=(0, 255, 0), thickness=3)
-                            # Draw the class name
                             top_left = tuple(np.int32(dst[0][0]))
-                            cv2.putText(img2, className[i], top_left, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
+                            cv2.putText(img2, className[i], top_left, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2,
+                                        cv2.LINE_AA)
 
         # Convert the image from BGR to RGB format
         rgb_image = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
