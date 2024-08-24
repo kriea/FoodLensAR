@@ -183,9 +183,6 @@ class CameraWindow(QMainWindow):
                 if matchCount > 60:  # Threshold for good matches
                     print(f'Match found (SIFT): {className[i]} with {matchCount} good matches')
 
-                    # Update detection count for the detected item
-                    self.detection_counts[className[i]] += 1
-
                     # Get points from the match
                     src_pts = np.float32([kp[0] for kp in kpPairs[i]]).reshape(-1, 1, 2)
                     dst_pts = np.float32([kp[1] for kp in kpPairs[i]]).reshape(-1, 1, 2)
@@ -198,11 +195,21 @@ class CameraWindow(QMainWindow):
                         pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
                         dst = cv2.perspectiveTransform(pts, M)
 
-                        # Draw bounding box
-                        img2 = cv2.polylines(img2, [np.int32(dst)], isClosed=True, color=(0, 255, 0), thickness=3)
-                        # Draw the class name
-                        top_left = tuple(np.int32(dst[0][0]))
-                        cv2.putText(img2, className[i], top_left, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
+                        # Calculate the bounding box size
+                        x_min, y_min = np.min(dst[:, 0, :], axis=0)
+                        x_max, y_max = np.max(dst[:, 0, :], axis=0)
+                        bbox_width = x_max - x_min
+                        bbox_height = y_max - y_min
+
+                        if bbox_width > 20 and bbox_height > 20:
+                            # Only consider this a valid detection if the bounding box is larger than 20x20 pixels
+                            self.detection_counts[className[i]] += 1
+
+                            # Draw bounding box
+                            img2 = cv2.polylines(img2, [np.int32(dst)], isClosed=True, color=(0, 255, 0), thickness=3)
+                            # Draw the class name
+                            top_left = tuple(np.int32(dst[0][0]))
+                            cv2.putText(img2, className[i], top_left, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
 
         # Convert the image from BGR to RGB format
         rgb_image = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
