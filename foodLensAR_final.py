@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import os
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QImage, QPixmap, QFont
+from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon
 from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton
 
 # Specify path for stock images
@@ -83,20 +83,20 @@ class CameraWindow(QMainWindow):
 
         # QLabel to display the camera feed
         self.image_label = QLabel(self)
+        self.image_label.setStyleSheet("border: 2px solid #2A2E32; padding: 5px;")
         self.camera_layout.addWidget(self.image_label)
 
-        # Add a button to start the camera
-        self.start_button = QPushButton("Start Camera", self)
-        self.start_button.clicked.connect(self.start_camera)
-        self.camera_layout.addWidget(self.start_button)
-
-        # Add a button to stop the camera
-        self.stop_button = QPushButton("Stop Camera", self)
-        self.stop_button.clicked.connect(self.stop_camera)
-        self.camera_layout.addWidget(self.stop_button)
+        # Add a single button to start/stop the camera
+        self.camera_button = QPushButton("Start Camera", self)
+        self.camera_button.setIcon(QIcon('camera-icon.png'))  # Assuming you have an icon file
+        self.camera_button.setStyleSheet(self.get_button_style())
+        self.camera_button.clicked.connect(self.toggle_camera)
+        self.camera_layout.addWidget(self.camera_button)
 
         # Add a button to start detection
         self.detect_button = QPushButton("Start Detection", self)
+        self.detect_button.setIcon(QIcon('detect-icon.png'))
+        self.detect_button.setStyleSheet(self.get_button_style())
         self.detect_button.clicked.connect(self.start_detection)
         self.camera_layout.addWidget(self.detect_button)
 
@@ -107,7 +107,8 @@ class CameraWindow(QMainWindow):
         self.detected_items_label = QLabel(self)
         self.detected_items_label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.detected_items_label.setFont(QFont('Arial', 16))  # Set a bigger font size
-        self.detected_items_label.setText("Ingredient List:")
+        self.detected_items_label.setText("<b>Ingredient List:</b>")
+        self.detected_items_label.setStyleSheet(self.get_ingredient_list_style())
         self.main_layout.addWidget(self.detected_items_label)
 
         # Timer to refresh the camera feed
@@ -117,6 +118,7 @@ class CameraWindow(QMainWindow):
         # Initialize camera and detection flag
         self.cap = None
         self.detecting = False
+        self.camera_on = False  # Track camera state
 
         # Extract descriptors using SIFT
         self.kpListSIFT, self.desListSIFT = findSIFT(imgStock, sift)
@@ -126,10 +128,84 @@ class CameraWindow(QMainWindow):
         self.detection_counts = {name: 0 for name in className}
         self.detection_threshold = 10  # Detection threshold
 
+    def get_button_style(self):
+        """Return a stylesheet for buttons."""
+        return """
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                font-size: 16px;
+                border-radius: 10px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+        """
+
+    def get_detection_button_style(self, detecting):
+        """Return a stylesheet for the detection button."""
+        if detecting:
+            return """
+                QPushButton {
+                    background-color: #f44336;
+                    color: white;
+                    font-size: 16px;
+                    border-radius: 10px;
+                    padding: 10px;
+                }
+                QPushButton:hover {
+                    background-color: #e53935;
+                }
+            """
+        else:
+            return self.get_button_style()
+
+    def get_ingredient_list_style(self):
+        """Return a stylesheet for the ingredient list to make it prettier."""
+        return """
+            QLabel {
+                border: 2px solid #2A2E32;
+                padding: 15px;
+                font-size: 14px;
+                border-radius: 10px;
+                background-color: #f9f9f9;
+                margin-left: 10px;
+            }
+            QLabel::title {
+                font-size: 18px;
+                font-weight: bold;
+                color: #333;
+                padding-bottom: 10px;
+            }
+        """
+
+    def toggle_camera(self):
+        """Start or stop the camera feed."""
+        if not self.camera_on:
+            self.start_camera()
+        else:
+            self.stop_camera()
+
     def start_camera(self):
         """Start the camera feed."""
         self.cap = cv2.VideoCapture(0)  # Use the correct device index for your camera
         self.timer.start(30)  # Refresh frame every 30 ms
+        self.camera_on = True
+        self.camera_button.setText("Stop Camera")
+        self.camera_button.setIcon(QIcon('stop-icon.png'))  # Update icon for stopping
+        self.camera_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                font-size: 16px;
+                border-radius: 10px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background-color: #e53935;
+            }
+        """)
 
     def stop_camera(self):
         """Stop the camera feed."""
@@ -137,6 +213,10 @@ class CameraWindow(QMainWindow):
         if self.cap:
             self.cap.release()
         self.image_label.clear()
+        self.camera_on = False
+        self.camera_button.setText("Start Camera")
+        self.camera_button.setIcon(QIcon('camera-icon.png'))  # Revert icon for starting
+        self.camera_button.setStyleSheet(self.get_button_style())
 
     def start_detection(self):
         """Toggle detection on or off."""
@@ -147,21 +227,46 @@ class CameraWindow(QMainWindow):
             self.detect_button.setText("Start Detection")
             self.process_detection_results()
 
+        # Update button color
+        self.detect_button.setStyleSheet(self.get_detection_button_style(self.detecting))
+
     def process_detection_results(self):
         """Process detection results after detection stops."""
         # Filter out items below the threshold count
         detected_items = [item for item, count in self.detection_counts.items() if count >= self.detection_threshold]
 
-        # Update the label with detected items
-        detected_text = "Ingredient List: \n" + "\n".join(detected_items)
-        self.detected_items_label.setText(detected_text)
+        # Create a pretty formatted ingredient list with bullet points
+        detected_text = "<b>Ingredient List:</b> <br><ul>"
+        for item in detected_items:
+            detected_text += f"<li>{item}</li>"
+        detected_text += "</ul>"
 
+        # Print detected items in the console for debugging
         print("\nDetected Items (above threshold):")
         for item in detected_items:
             print(item)
 
+        # Call the function to provide recipe suggestions based on detected items
+        recipe_suggestion = self.get_recipe_suggestion(detected_items)
+
+        # Show the recipe suggestion
+        suggestion_text = f"<br><b>Recipe Suggestion:</b> <br>{recipe_suggestion}"
+        self.detected_items_label.setText(detected_text + suggestion_text)
+
         # Reset detection counts after processing
         self.detection_counts = {name: 0 for name in className}
+
+    def get_recipe_suggestion(self, detected_items):
+        """Return a recipe suggestion based on detected ingredients."""
+        # Define known combinations and corresponding recipe suggestions
+        if "pasta" in detected_items and "tomato puree" in detected_items:
+            return "How about making some pasta with tomato sauce?"
+        elif "eggs" in detected_items and "chocolate" in detected_items:
+            return "It looks like you're halfway to a cake! Maybe buy some more ingredients?"
+        elif "bread" in detected_items and "eggs" in detected_items:
+            return "You could make an egg and bread recipe, like French toast."
+        else:
+            return "Seems like you're missing some key ingredients. Why not buy a few more items?"
 
     def update_frame(self):
         """Capture frame from camera and update QLabel."""
