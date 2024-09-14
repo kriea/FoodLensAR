@@ -2,6 +2,7 @@ import sys
 import cv2
 import numpy as np
 import os
+import re
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon
 from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton
@@ -230,10 +231,26 @@ class CameraWindow(QMainWindow):
         # Update button color
         self.detect_button.setStyleSheet(self.get_detection_button_style(self.detecting))
 
+    
+
+
     def process_detection_results(self):
         """Process detection results after detection stops."""
-        # Filter out items below the threshold count
-        detected_items = [item for item, count in self.detection_counts.items() if count >= self.detection_threshold]
+    
+        # Create a set to track items that have already been added
+        seen_items = set()
+
+        # Filter out items below the threshold count, remove numbers from the end, and remove duplicates
+        detected_items = []
+        for item, count in self.detection_counts.items():
+            if count >= self.detection_threshold:
+                # Remove numbers from the end of the item
+                cleaned_item = re.sub(r'\d+$', '', item).strip()
+
+             # Only add the item if it's not already in the set (i.e., it's not a duplicate)
+                if cleaned_item not in seen_items:
+                    detected_items.append(cleaned_item)
+                    seen_items.add(cleaned_item)
 
         # Create a pretty formatted ingredient list with bullet points
         detected_text = "<b>Ingredient List:</b> <br><ul>"
@@ -254,19 +271,35 @@ class CameraWindow(QMainWindow):
         self.detected_items_label.setText(detected_text + suggestion_text)
 
         # Reset detection counts after processing
-        self.detection_counts = {name: 0 for name in className}
+        self.detection_counts = {name: 0 for name in self.detection_counts.keys()}
 
+        
     def get_recipe_suggestion(self, detected_items):
-        """Return a recipe suggestion based on detected ingredients."""
-        # Define known combinations and corresponding recipe suggestions
-        if "pasta" in detected_items and "tomato puree" in detected_items:
-            return "How about making some pasta with tomato sauce?"
-        elif "eggs" in detected_items and "chocolate" in detected_items:
-            return "It looks like you're halfway to a cake! Maybe buy some more ingredients?"
-        elif "bread" in detected_items and "eggs" in detected_items:
-            return "You could make an egg and bread recipe, like French toast."
-        else:
-            return "Seems like you're missing some key ingredients. Why not buy a few more items?"
+        """Return and print recipe suggestions based on detected ingredients."""
+        suggestions = []
+
+       # Define known combinations and corresponding recipe suggestions
+        if "pasta" in detected_items and "tomatopuree" in detected_items:
+            suggestions.append("How about making some pasta with tomato sauce?")
+    
+        if "eggs" in detected_items and "chocolate" in detected_items:
+            suggestions.append("It looks like you're halfway to a cake! Maybe buy some more ingredients?")
+    
+        if "bread" in detected_items and "eggs" in detected_items:
+            suggestions.append("You could make an egg and bread recipe, like an egg Toast.")
+
+        # Print and return all suggestions if any are found
+        if suggestions:
+            for suggestion in suggestions:
+                print(suggestion)
+            # Number the suggestions and format them for the GUI
+            numbered_suggestions = "<br>".join([f"{idx + 1}. {suggestion}" for idx, suggestion in enumerate(suggestions)])
+            return numbered_suggestions  # Return formatted and numbered suggestions for the GUI
+    
+        # Print and return the default message if no known combinations are found
+        default_message = "Seems like you're missing some key ingredients. Why not buy a few more items?"
+        print(default_message)
+        return default_message
 
     def update_frame(self):
         """Capture frame from camera and update QLabel."""
