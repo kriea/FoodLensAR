@@ -190,7 +190,7 @@ class CameraWindow(QMainWindow):
 
     def start_camera(self):
         """Start the camera feed."""
-        self.cap = cv2.VideoCapture(0)  # Use the correct device index for your camera
+        self.cap = cv2.VideoCapture(1)  # Use the correct device index for your camera 0:inbuilt 1:iruin
         self.timer.start(30)  # Refresh frame every 30 ms
         self.camera_on = True
         self.camera_button.setText("Stop Camera")
@@ -280,13 +280,13 @@ class CameraWindow(QMainWindow):
 
        # Define known combinations and corresponding recipe suggestions
         if "pasta" in detected_items and "tomatopuree" in detected_items:
-            suggestions.append("How about making some pasta with tomato sauce?")
-    
-        if "eggs" in detected_items and "chocolate" in detected_items:
-            suggestions.append("It looks like you're halfway to a cake! Maybe buy some more ingredients?")
-    
+            suggestions.append("How about making some pasta with tomato sauce?")   
+        if "chocolate" in detected_items:
+            suggestions.append("Chocolate sounds like a nice snack!")
         if "bread" in detected_items and "eggs" in detected_items:
             suggestions.append("You could make an egg and bread recipe, like an egg Toast.")
+        if "cocoa" in detected_items and "eggs" in detected_items and "chocolate" in detected_items:
+            suggestions.append("It looks like you're halfway to a cake! Maybe buy some more ingredients")
 
         # Print and return all suggestions if any are found
         if suggestions:
