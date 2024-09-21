@@ -1,6 +1,6 @@
 This is a test project
 
-1. install python3, Vscode and pip.
+1. install python3.11, Vscode and pip.
 2. clone the repository from https://github.com/kriea/FoodLensAR.git
 3. after opening in vscode, open integrated terminal and set Up Virtual Environment(Optional) with 
     >python3 -m venv venv
